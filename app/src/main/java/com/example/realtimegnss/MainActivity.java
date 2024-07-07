@@ -1,4 +1,5 @@
 package com.example.realtimegnss;
+//
 
 import android.Manifest;
 import android.content.pm.PackageManager;
