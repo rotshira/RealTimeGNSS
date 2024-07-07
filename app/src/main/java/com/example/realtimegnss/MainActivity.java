@@ -16,7 +16,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
-import com.example.realtimegnss.R;
 import com.google.gson.Gson;
 
 import java.io.OutputStream;
@@ -30,8 +29,8 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
     private LocationManager locationManager;
     private Socket socket;
     private PrintWriter writer;
-    private static final String SERVER_IP = "192.168.33.5"; // Replace with your computer's IP address
-    private static final int SERVER_PORT = 5000; // Replace with your server's port number
+    private static final String SERVER_IP = "192.168.43.53"; // Replace with your computer's IP address
+    private static final int SERVER_PORT = 5001; // Replace with your server's port number
 
     private TextView latitudeText;
     private TextView longitudeText;
@@ -100,6 +99,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                         // Calculate x, y, z here using your Python logic converted to Java
                         calculateSatellitePosition();
 
+                        Log.d("MainActivity", "Sending GNSS data");
                         sendCombinedData();
                     }
                 }
@@ -159,10 +159,14 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         // Convert the map to JSON
         Gson gson = new Gson();
         String json = gson.toJson(combinedData);
+        Log.d("MainActivity", "Sending JSON: " + json);
 
         // Send the JSON data to the server
         if (writer != null) {
-            new Thread(() -> writer.println(json)).start(); // Ensure this runs in a background thread
+            new Thread(() -> {
+                Log.d("MainActivity", "Sending data to server");
+                writer.println(json);
+            }).start(); // Ensure this runs in a background thread
         }
 
         runOnUiThread(() -> {
@@ -174,7 +178,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
             zText.setText("Z: " + z);
         });
     }
-
     @Override
     public void onStatusChanged(String provider, int status, Bundle extras) {}
 
