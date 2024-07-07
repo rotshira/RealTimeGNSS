@@ -5,7 +5,7 @@
 The Real-Time GNSS Android App collects GNSS measurements from the device and transmits the data to a specified server for further processing and visualization. It provides real-time GNSS data such as latitude, longitude, altitude, pseudorange rate, CN0, Doppler shift, and computed ECEF (Earth-Centered, Earth-Fixed) coordinates.
 
 
-<img width="1292" alt="image" src="https://imgur.com/HandBa4.png">
+<img width="800" alt="image" src="https://imgur.com/HandBa4.png">
 ## Features
 
 - **Real-Time GNSS Data Collection**: Captures GNSS measurements from the device.
