@@ -1,5 +1,4 @@
 package com.example.realtimegnss;
-//
 
 import android.Manifest;
 import android.content.pm.PackageManager;
@@ -22,7 +21,9 @@ import com.google.gson.Gson;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements LocationListener {
@@ -30,7 +31,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
     private LocationManager locationManager;
     private Socket socket;
     private PrintWriter writer;
-    private static final String SERVER_IP = "192.168.43.53"; // Replace with your computer's IP address
+    private static final String SERVER_IP = "192.168.33.10"; // Replace with your computer's IP address
     private static final int SERVER_PORT = 5001; // Replace with your server's port number
 
     private TextView latitudeText;
@@ -46,12 +47,8 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
     private double latitude;
     private double longitude;
     private double altitude;
-    private double pseudorangeRateMetersPerSecond;
-    private double cn0DbHz;
-    private double dopplerShift;
-    private double x;
-    private double y;
-    private double z;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -92,17 +89,41 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                 @Override
                 public void onGnssMeasurementsReceived(@NonNull GnssMeasurementsEvent event) {
                     super.onGnssMeasurementsReceived(event);
+                    List<Map<String, Object>> satellitesData = new ArrayList<>();
                     for (GnssMeasurement measurement : event.getMeasurements()) {
-                        cn0DbHz = measurement.getCn0DbHz();
-                        pseudorangeRateMetersPerSecond = measurement.getPseudorangeRateMetersPerSecond();
-                        dopplerShift = pseudorangeRateMetersPerSecond; // Use pseudorange rate as Doppler shift
+                        Map<String, Object> satelliteData = new HashMap<>();
+                        satelliteData.put("cn0", measurement.getCn0DbHz());
+                        satelliteData.put("pseudorangeRate", measurement.getPseudorangeRateMetersPerSecond());
+                        satelliteData.put("doppler", measurement.getPseudorangeRateMetersPerSecond());
 
-                        // Calculate x, y, z here using your Python logic converted to Java
-                        calculateSatellitePosition();
+                        // Collecting additional GNSS data
+                        satelliteData.put("svid", measurement.getSvid());
+                        satelliteData.put("constellationType", measurement.getConstellationType());
+                        satelliteData.put("timeOffsetNanos", measurement.getTimeOffsetNanos());
+                        satelliteData.put("state", measurement.getState());
+                        satelliteData.put("receivedSvTimeNanos", measurement.getReceivedSvTimeNanos());
+                        satelliteData.put("receivedSvTimeUncertaintyNanos", measurement.getReceivedSvTimeUncertaintyNanos());
+                        satelliteData.put("cn0DbHz", measurement.getCn0DbHz());
+                        satelliteData.put("pseudorangeRateMetersPerSecond", measurement.getPseudorangeRateMetersPerSecond());
+                        satelliteData.put("pseudorangeRateUncertaintyMetersPerSecond", measurement.getPseudorangeRateUncertaintyMetersPerSecond());
+                        satelliteData.put("accumulatedDeltaRangeState", measurement.getAccumulatedDeltaRangeState());
+                        satelliteData.put("accumulatedDeltaRangeMeters", measurement.getAccumulatedDeltaRangeMeters());
+                        satelliteData.put("accumulatedDeltaRangeUncertaintyMeters", measurement.getAccumulatedDeltaRangeUncertaintyMeters());
+                        satelliteData.put("carrierFrequencyHz", measurement.getCarrierFrequencyHz());
+                        satelliteData.put("carrierCycles", measurement.getCarrierCycles());
+                        satelliteData.put("carrierPhase", measurement.getCarrierPhase());
+                        satelliteData.put("carrierPhaseUncertainty", measurement.getCarrierPhaseUncertainty());
+                        satelliteData.put("multipathIndicator", measurement.getMultipathIndicator());
+                        satelliteData.put("snrInDb", measurement.getSnrInDb());
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            satelliteData.put("automaticGainControlLevelDb", measurement.getAutomaticGainControlLevelDb());
+                        }
 
-                        Log.d("MainActivity", "Sending GNSS data");
-                        sendCombinedData();
+                        satellitesData.add(satelliteData);
                     }
+
+                    // Send the data
+                    sendCombinedData(satellitesData);
                 }
             }, null);
         }
@@ -114,48 +135,21 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         longitude = location.getLongitude();
         altitude = location.getAltitude();
 
-        calculateSatellitePosition();
-        sendCombinedData();
-
         runOnUiThread(() -> {
             latitudeText.setText("Latitude: " + latitude);
             longitudeText.setText("Longitude: " + longitude);
             altitudeText.setText("Altitude: " + altitude);
+
         });
     }
 
-    private void calculateSatellitePosition() {
-        // WGS84 ellipsoid constants
-        double a = 6378137.0; // semi-major axis in meters
-        double f = 1 / 298.257223563; // flattening
-        double b = a * (1 - f); // semi-minor axis in meters
-        double e2 = (a * a - b * b) / (a * a); // square of eccentricity
-
-        // Convert latitude, longitude, altitude to radians
-        double latRad = Math.toRadians(latitude);
-        double lonRad = Math.toRadians(longitude);
-
-        // Calculate prime vertical radius of curvature
-        double N = a / Math.sqrt(1 - e2 * Math.sin(latRad) * Math.sin(latRad));
-
-        // Calculate X, Y, Z coordinates
-        x = (N + altitude) * Math.cos(latRad) * Math.cos(lonRad);
-        y = (N + altitude) * Math.cos(latRad) * Math.sin(lonRad);
-        z = ((1 - e2) * N + altitude) * Math.sin(latRad);
-    }
-
-    private void sendCombinedData() {
+    private void sendCombinedData(List<Map<String, Object>> satellitesData) {
         // Create a map to store all the data
         Map<String, Object> combinedData = new HashMap<>();
         combinedData.put("latitude", latitude);
         combinedData.put("longitude", longitude);
         combinedData.put("altitude", altitude);
-        combinedData.put("pseudorangeRate", pseudorangeRateMetersPerSecond);
-        combinedData.put("cn0", cn0DbHz);
-        combinedData.put("doppler", dopplerShift);
-        combinedData.put("x", x);
-        combinedData.put("y", y);
-        combinedData.put("z", z);
+        combinedData.put("satellites", satellitesData);
 
         // Convert the map to JSON
         Gson gson = new Gson();
@@ -171,14 +165,18 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         }
 
         runOnUiThread(() -> {
-            pseudorangeText.setText("Pseudo-Range Rate: " + pseudorangeRateMetersPerSecond);
-            cn0Text.setText("CN0: " + cn0DbHz);
-            dopplerText.setText("Doppler: " + dopplerShift);
-            xText.setText("X: " + x);
-            yText.setText("Y: " + y);
-            zText.setText("Z: " + z);
+            if (!satellitesData.isEmpty()) {
+                Map<String, Object> firstSatellite = satellitesData.get(0);
+                pseudorangeText.setText("Pseudo-Range Rate: " + firstSatellite.get("pseudorangeRate"));
+                cn0Text.setText("CN0: " + firstSatellite.get("cn0"));
+                dopplerText.setText("Doppler: " + firstSatellite.get("doppler"));
+//                xText.setText("X: " + x);
+//                yText.setText("Y: " + y);
+//                zText.setText("Z: " + z);
+            }
         });
     }
+
     @Override
     public void onStatusChanged(String provider, int status, Bundle extras) {}
 
