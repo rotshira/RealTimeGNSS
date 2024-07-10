@@ -9,6 +9,7 @@ import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -25,6 +26,7 @@ import com.google.gson.Gson;
 
 import android.location.LocationManager;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
@@ -37,7 +39,7 @@ import java.util.Map;
 
             private static final int REQUEST_CODE_PERMISSIONS = 1;
             private static final String SERVER_IP = "10.0.0.2"; // Replace with your computer's IP address
-            private static final int SERVER_PORT = 5001; // Replace with your server's port number
+            private static final int SERVER_PORT = 5002; // Replace with your server's port number
 
             private FusedLocationProviderClient fusedLocationClient;
             private LocationCallback locationCallback;
@@ -54,6 +56,7 @@ import java.util.Map;
             private TextView xText;
             private TextView yText;
             private TextView zText;
+            private Button closeButton;
 
             private double latitude;
             private double longitude;
@@ -76,6 +79,7 @@ import java.util.Map;
                 xText = findViewById(R.id.x_text);
                 yText = findViewById(R.id.y_text);
                 zText = findViewById(R.id.z_text);
+                closeButton = findViewById(R.id.close_button);
 
                 fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
                 locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
@@ -199,6 +203,14 @@ import java.util.Map;
                             sendCombinedData(satellitesData);
                         }
                     }, null);
+                    closeButton.setOnClickListener(v -> {
+                        finishAffinity();
+                        try {
+                            socket.close();// Close the app
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
                 }
             }
 

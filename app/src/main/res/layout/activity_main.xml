@@ -7,73 +7,131 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="16dp"
+        android:background="#F8F8F8">
+
+        <!-- Title -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp"
+            android:text="GNSS Logger"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:textColor="#333333"
+            android:background="#E0E0E0"
+            android:layout_marginBottom="16dp" />
 
         <TextView
             android:id="@+id/latitude_text"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:padding="8dp"
             android:text="Latitude: "
-            android:textSize="18sp" />
+            android:textSize="18sp"
+            android:textColor="#333333"
+            android:background="#FFFFFF"
+            android:layout_marginBottom="8dp" />
 
         <TextView
             android:id="@+id/longitude_text"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:padding="8dp"
             android:text="Longitude: "
-            android:textSize="18sp" />
+            android:textSize="18sp"
+            android:textColor="#333333"
+            android:background="#FFFFFF"
+            android:layout_marginBottom="8dp" />
 
         <TextView
             android:id="@+id/altitude_text"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:padding="8dp"
             android:text="Altitude: "
-            android:textSize="18sp" />
+            android:textSize="18sp"
+            android:textColor="#333333"
+            android:background="#FFFFFF"
+            android:layout_marginBottom="8dp" />
 
         <TextView
             android:id="@+id/pseudorange_text"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:padding="8dp"
             android:text="Pseudo-Range: "
-            android:textSize="18sp" />
+            android:textSize="18sp"
+            android:textColor="#333333"
+            android:background="#FFFFFF"
+            android:layout_marginBottom="8dp" />
 
         <TextView
             android:id="@+id/cn0_text"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:padding="8dp"
             android:text="CN0: "
-            android:textSize="18sp" />
+            android:textSize="18sp"
+            android:textColor="#333333"
+            android:background="#FFFFFF"
+            android:layout_marginBottom="8dp" />
 
         <TextView
             android:id="@+id/doppler_text"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:padding="8dp"
             android:text="Doppler: "
-            android:textSize="18sp" />
+            android:textSize="18sp"
+            android:textColor="#333333"
+            android:background="#FFFFFF"
+            android:layout_marginBottom="8dp" />
 
         <TextView
             android:id="@+id/x_text"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:padding="8dp"
             android:text="X: "
-            android:textSize="18sp" />
+            android:textSize="18sp"
+            android:textColor="#333333"
+            android:background="#FFFFFF"
+            android:layout_marginBottom="8dp" />
 
         <TextView
             android:id="@+id/y_text"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:padding="8dp"
             android:text="Y: "
-            android:textSize="18sp" />
+            android:textSize="18sp"
+            android:textColor="#333333"
+            android:background="#FFFFFF"
+            android:layout_marginBottom="8dp" />
 
         <TextView
             android:id="@+id/z_text"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:padding="8dp"
             android:text="Z: "
-            android:textSize="18sp" />
+            android:textSize="18sp"
+            android:textColor="#333333"
+            android:background="#FFFFFF"
+            android:layout_marginBottom="8dp" />
 
-
-
+        <!-- Button to close the app -->
+        <Button
+            android:id="@+id/close_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Close App"
+            android:textSize="18sp"
+            android:textColor="#FFFFFF"
+            android:background="#FF0000"
+            android:layout_marginTop="16dp" />
 
     </LinearLayout>
 </ScrollView>
