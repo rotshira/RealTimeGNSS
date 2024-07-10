@@ -1,22 +1,29 @@
 package com.example.realtimegnss;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.location.GnssMeasurement;
 import android.location.GnssMeasurementsEvent;
 import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
 import com.google.gson.Gson;
+
+import android.location.LocationManager;
 
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -26,13 +33,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class MainActivity extends AppCompatActivity implements LocationListener {
+public class MainActivity extends AppCompatActivity {
 
-    private LocationManager locationManager;
+    private static final int REQUEST_CODE_PERMISSIONS = 1;
+    private static final String SERVER_IP = "10.0.0.2"; // Replace with your computer's IP address
+    private static final int SERVER_PORT = 5002; // Replace with your server's port number
+
+    private FusedLocationProviderClient fusedLocationClient;
+    private LocationCallback locationCallback;
     private Socket socket;
     private PrintWriter writer;
-    private static final String SERVER_IP = "192.168.33.10"; // Replace with your computer's IP address
-    private static final int SERVER_PORT = 5001; // Replace with your server's port number
+    private LocationManager locationManager;
 
     private TextView latitudeText;
     private TextView longitudeText;
@@ -47,8 +58,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
     private double latitude;
     private double longitude;
     private double altitude;
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,32 +74,87 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         yText = findViewById(R.id.y_text);
         zText = findViewById(R.id.z_text);
 
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
-        // Request location updates
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+        // Request permissions
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
+                    REQUEST_CODE_PERMISSIONS);
         } else {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, this);
+            startLocationUpdates();
+            registerGnssMeasurementsCallback();
         }
 
+        // Start socket connection in a separate thread
         new Thread(() -> {
             try {
                 socket = new Socket(SERVER_IP, SERVER_PORT);
                 OutputStream outputStream = socket.getOutputStream();
                 writer = new PrintWriter(outputStream, true);
+                Log.d("MainActivity", "Socket connection established");
             } catch (Exception e) {
                 Log.e("MainActivity", "Error connecting to server", e);
             }
         }).start();
+    }
 
+    private void startLocationUpdates() {
+        LocationRequest locationRequest = LocationRequest.create()
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+                .setInterval(1000) // 1 second interval
+                .setFastestInterval(500); // 0.5 second fastest interval
+
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult locationResult) {
+                super.onLocationResult(locationResult);
+                if (locationResult == null) {
+                    Log.d("MainActivity", "Location result is null");
+                    return;
+                }
+
+                for (Location location : locationResult.getLocations()) {
+                    Log.d("MainActivity", "Location result: " + location);
+                    latitude = location.getLatitude();
+                    longitude = location.getLongitude();
+                    altitude = location.getAltitude();
+
+                    Log.d("MainActivity", "Latitude: " + latitude);
+                    Log.d("MainActivity", "Longitude: " + longitude);
+                    Log.d("MainActivity", "Altitude: " + altitude);
+
+                    runOnUiThread(() -> {
+                        latitudeText.setText("Latitude: " + latitude);
+                        longitudeText.setText("Longitude: " + longitude);
+                        altitudeText.setText("Altitude: " + altitude);
+                    });
+                }
+            }
+        };
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
+    }
+
+    private void registerGnssMeasurementsCallback() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
             locationManager.registerGnssMeasurementsCallback(new GnssMeasurementsEvent.Callback() {
                 @Override
                 public void onGnssMeasurementsReceived(@NonNull GnssMeasurementsEvent event) {
                     super.onGnssMeasurementsReceived(event);
+                    Log.d("MainActivity", "GNSS measurements received");
                     List<Map<String, Object>> satellitesData = new ArrayList<>();
                     for (GnssMeasurement measurement : event.getMeasurements()) {
+                        Log.d("MainActivity", "Processing GNSS measurement: " + measurement);
                         Map<String, Object> satelliteData = new HashMap<>();
                         satelliteData.put("cn0", measurement.getCn0DbHz());
                         satelliteData.put("pseudorangeRate", measurement.getPseudorangeRateMetersPerSecond());
@@ -115,6 +179,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                         satelliteData.put("carrierPhaseUncertainty", measurement.getCarrierPhaseUncertainty());
                         satelliteData.put("multipathIndicator", measurement.getMultipathIndicator());
                         satelliteData.put("snrInDb", measurement.getSnrInDb());
+
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             satelliteData.put("automaticGainControlLevelDb", measurement.getAutomaticGainControlLevelDb());
                         }
@@ -130,20 +195,22 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
     }
 
     @Override
-    public void onLocationChanged(@NonNull Location location) {
-        latitude = location.getLatitude();
-        longitude = location.getLongitude();
-        altitude = location.getAltitude();
-
-        runOnUiThread(() -> {
-            latitudeText.setText("Latitude: " + latitude);
-            longitudeText.setText("Longitude: " + longitude);
-            altitudeText.setText("Altitude: " + altitude);
-
-        });
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_CODE_PERMISSIONS) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d("MainActivity", "Location permissions granted");
+                startLocationUpdates();
+                registerGnssMeasurementsCallback();
+            } else {
+                Log.d("MainActivity", "Location permissions denied");
+                Toast.makeText(this, "Permission to access location denied.", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     private void sendCombinedData(List<Map<String, Object>> satellitesData) {
+        Log.d("MainActivity", "Preparing to send combined data");
         // Create a map to store all the data
         Map<String, Object> combinedData = new HashMap<>();
         combinedData.put("latitude", latitude);
@@ -159,9 +226,17 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         // Send the JSON data to the server
         if (writer != null) {
             new Thread(() -> {
-                Log.d("MainActivity", "Sending data to server");
-                writer.println(json);
+                try {
+                    Log.d("MainActivity", "Sending data to server");
+                    writer.println(json);
+                    writer.flush();
+                    Log.d("MainActivity", "Data sent to server");
+                } catch (Exception e) {
+                    Log.e("MainActivity", "Error sending data to server", e);
+                }
             }).start(); // Ensure this runs in a background thread
+        } else {
+            Log.e("MainActivity", "Writer is null, cannot send data");
         }
 
         runOnUiThread(() -> {
@@ -170,21 +245,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
                 pseudorangeText.setText("Pseudo-Range Rate: " + firstSatellite.get("pseudorangeRate"));
                 cn0Text.setText("CN0: " + firstSatellite.get("cn0"));
                 dopplerText.setText("Doppler: " + firstSatellite.get("doppler"));
-//                xText.setText("X: " + x);
-//                yText.setText("Y: " + y);
-//                zText.setText("Z: " + z);
             }
         });
     }
-
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {}
-
-    @Override
-    public void onProviderEnabled(@NonNull String provider) {}
-
-    @Override
-    public void onProviderDisabled(@NonNull String provider) {}
 
     @Override
     protected void onDestroy() {
@@ -192,9 +255,14 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         if (socket != null) {
             try {
                 socket.close();
+                Log.d("MainActivity", "Socket closed");
             } catch (Exception e) {
                 Log.e("MainActivity", "Error closing socket", e);
             }
+        }
+        if (fusedLocationClient != null && locationCallback != null) {
+            fusedLocationClient.removeLocationUpdates(locationCallback);
+            Log.d("MainActivity", "Location updates removed");
         }
     }
 }
