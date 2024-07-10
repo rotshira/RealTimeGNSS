@@ -205,11 +205,7 @@ import java.util.Map;
                     }, null);
                     closeButton.setOnClickListener(v -> {
                         finishAffinity();
-                        try {
-                            socket.close();// Close the app
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
+                        onDestroy();
                     });
                 }
             }
